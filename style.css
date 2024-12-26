@@ -307,4 +307,78 @@ tr:hover {
 
 .btn-submit:hover {
     background-color: #45a049;
+}
+
+/* Snapshots section styles */
+.snapshots-section {
+    margin-top: 30px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.create-snapshot-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.create-snapshot-btn:hover {
+    background-color: #45a049;
+}
+
+.snapshots-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.snapshots-table th,
+.snapshots-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.snapshots-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.snapshots-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+#createSnapshotForm textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    min-height: 100px;
+    box-sizing: border-box;
+}
+
+#createSnapshotForm .form-group {
+    margin-bottom: 15px;
+}
+
+#createSnapshotForm label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+#createSnapshotForm input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+#createSnapshotForm input[type="checkbox"] + label {
+    display: inline;
+    font-weight: normal;
 } 

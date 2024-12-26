@@ -634,6 +634,46 @@ if (isset($_GET['action'])) {
                 echo json_encode($policies['value']);
                 break;
 
+            case 'get_snapshots':
+                if (!isset($_GET['vm_id'])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'VM ID is required']);
+                    exit;
+                }
+
+                $snapshots = getVMSnapshots($vcenter_host, $session_id, $curl_opts, $_GET['vm_id']);
+                if ($snapshots) {
+                    echo json_encode([
+                        'success' => true,
+                        'snapshots' => $snapshots['value']
+                    ]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(['error' => 'Failed to fetch snapshots']);
+                }
+                break;
+
+            case 'create_snapshot':
+                if (!isset($_POST['vm_id']) || !isset($_POST['name'])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'VM ID and snapshot name are required']);
+                    exit;
+                }
+
+                $result = createVMSnapshot($vcenter_host, $session_id, $curl_opts, $_POST['vm_id'], $_POST);
+                if ($result['success']) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => $result['message']
+                    ]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode([
+                        'error' => $result['message']
+                    ]);
+                }
+                break;
+
             default:
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid action']);
@@ -845,4 +885,78 @@ function handleAjaxRequests() {
     header('Content-Type: application/json');
     echo json_encode($response);
     exit;
+}
+
+// Function to get VM snapshots
+function getVMSnapshots($vcenter_host, $session_id, $curl_opts, $vm_id) {
+    $url = "https://$vcenter_host/rest/vcenter/vm/$vm_id/snapshots";
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        "vmware-api-session-id: $session_id"
+    ));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    foreach ($curl_opts as $key => $value) {
+        curl_setopt($ch, $key, $value);
+    }
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code == 200) {
+        return json_decode($response, true);
+    }
+    return null;
+}
+
+// Function to create VM snapshot
+function createVMSnapshot($vcenter_host, $session_id, $curl_opts, $vm_id, $snapshot_data) {
+    // Önce mevcut snapshot sayısını kontrol et
+    $snapshots = getVMSnapshots($vcenter_host, $session_id, $curl_opts, $vm_id);
+    if ($snapshots && count($snapshots['value']) >= 5) {
+        return [
+            'success' => false,
+            'message' => 'Snapshot limit exceeded. Maximum 5 snapshots allowed.'
+        ];
+    }
+
+    $url = "https://$vcenter_host/rest/vcenter/vm/$vm_id/snapshots";
+    
+    $data = [
+        'name' => $snapshot_data['name'],
+        'description' => $snapshot_data['description'] ?? '',
+        'memory' => isset($snapshot_data['memory']) ? (bool)$snapshot_data['memory'] : false,
+        'quiesce' => isset($snapshot_data['quiesce']) ? (bool)$snapshot_data['quiesce'] : false
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        "vmware-api-session-id: $session_id"
+    ));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    
+    foreach ($curl_opts as $key => $value) {
+        curl_setopt($ch, $key, $value);
+    }
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code == 201) {
+        return [
+            'success' => true,
+            'message' => 'Snapshot created successfully'
+        ];
+    }
+    return [
+        'success' => false,
+        'message' => 'Failed to create snapshot: ' . $response
+    ];
 }

@@ -4,7 +4,7 @@
  * @Author: Abdullah GÖK (abdullahazad)
  * @Date: 2024-12-26 17:29:28
  * @LastEditors: Abdullah GÖK (abdullahazad)
- * @LastEditTime: 2024-12-26 17:32:09
+ * @LastEditTime: 2024-12-26 17:50:05
 -->
 # vCenter VM Management Interface
 
@@ -18,6 +18,7 @@ Bu proje, VMware vCenter sunucusu üzerinde sanal makinelerin (VM) yönetimini s
 - VM'lerin detaylı istatistiklerini inceleyebilir
 - VM'lerin performans metriklerini grafiksel olarak takip edebilir
 - VM ile ilgili son 50 uyarıyı görüntüleyebilir
+- VM'lerin snapshot'larını yönetebilir (en fazla 5 snapshot)
 
 ### Özellikler
 - **VM Listesi**: Tüm sanal makinelerin güç durumu, CPU sayısı ve bellek boyutu gibi temel bilgilerini gösterir
@@ -31,6 +32,13 @@ Bu proje, VMware vCenter sunucusu üzerinde sanal makinelerin (VM) yönetimini s
   - CPU, RAM, disk ve ağ kullanım grafikleri
   - VMDK dosya yolları
   - VM ile ilgili son uyarılar
+  - Snapshot yönetimi (oluşturma, listeleme)
+- **Snapshot Yönetimi**:
+  - VM için en fazla 5 snapshot oluşturma
+  - Snapshot adı ve açıklama ekleme
+  - Bellek durumunu dahil etme seçeneği
+  - Dosya sistemi dondurma (quiesce) seçeneği
+  - Mevcut snapshot'ları listeleme
 
 ### Teknolojiler
 - PHP (Backend)
@@ -41,7 +49,7 @@ Bu proje, VMware vCenter sunucusu üzerinde sanal makinelerin (VM) yönetimini s
 
 ### Dosya Yapısı
 - `index.php`: Ana sayfa, VM listesi ve oluşturma modalı
-- `view.php`: VM detayları ve performans grafikleri
+- `view.php`: VM detayları, performans grafikleri ve snapshot yönetimi
 - `backend.php`: vCenter API işlemleri ve AJAX istekleri
 - `vm_form.php`: VM oluşturma form alanları
 - `app.js`: Tüm JavaScript fonksiyonları
@@ -59,6 +67,7 @@ This project provides a web-based interface for managing virtual machines (VMs) 
 - Examine detailed VM statistics
 - Monitor VM performance metrics graphically
 - View the last 50 alerts related to a VM
+- Manage VM snapshots (maximum 5 snapshots)
 
 ### Features
 - **VM List**: Shows basic information such as power state, CPU count, and memory size of all VMs
@@ -72,6 +81,13 @@ This project provides a web-based interface for managing virtual machines (VMs) 
   - CPU, RAM, disk, and network usage graphs
   - VMDK file paths
   - Recent VM alerts
+  - Snapshot management (create, list)
+- **Snapshot Management**:
+  - Create up to 5 snapshots per VM
+  - Add snapshot name and description
+  - Option to include memory state
+  - Option to quiesce file system
+  - List existing snapshots
 
 ### Technologies
 - PHP (Backend)
@@ -82,7 +98,7 @@ This project provides a web-based interface for managing virtual machines (VMs) 
 
 ### File Structure
 - `index.php`: Main page, VM list and creation modal
-- `view.php`: VM details and performance graphs
+- `view.php`: VM details, performance graphs and snapshot management
 - `backend.php`: vCenter API operations and AJAX requests
 - `vm_form.php`: VM creation form fields
 - `app.js`: All JavaScript functions
