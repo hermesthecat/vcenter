@@ -576,18 +576,24 @@ if (isset($_GET['action'])) {
                 }
 
                 $details = getVMDetails($vcenter_host, $session_id, $curl_opts, $_GET['vm_id']);
-                $metrics = getVMMetrics($vcenter_host, $session_id, $curl_opts, $_GET['vm_id']);
-
-                if (!$details && !$metrics) {
+                if ($details) {
+                    echo json_encode([
+                        'success' => true,
+                        'vm' => [
+                            'name' => $details['value']['name'],
+                            'cpu_count' => $details['value']['cpu']['count'],
+                            'cores_per_socket' => $details['value']['cpu']['cores_per_socket'],
+                            'memory_size_MiB' => $details['value']['memory']['size_MiB'],
+                            'cluster' => $details['value']['cluster'],
+                            'resource_pool' => $details['value']['resource_pool'],
+                            'network' => $details['value']['network'],
+                            'storage_policy' => $details['value']['storage_policy']
+                        ]
+                    ]);
+                } else {
                     http_response_code(500);
-                    echo json_encode(['error' => 'Failed to fetch VM information']);
-                    exit;
+                    echo json_encode(['error' => 'Failed to fetch VM details']);
                 }
-
-                echo json_encode([
-                    'details' => $details['value'] ?? null,
-                    'metrics' => $metrics['value'] ?? null
-                ]);
                 break;
 
             case 'get_clusters':
@@ -641,69 +647,131 @@ if (isset($_GET['action'])) {
     }
 }
 
-// Function to handle form submission
-function handleFormSubmission($session_id)
-{
-    global $vcenter_host, $curl_opts;
+// Function to update existing VM
+function updateExistingVM($vcenter_host, $session_id, $curl_opts, $vm_id, $vm_data) {
+    $url = "https://$vcenter_host/rest/vcenter/vm/$vm_id";
+    
+    $update_data = [
+        'spec' => [
+            'name' => $vm_data['vm_name'],
+            'cpu' => [
+                'count' => (int)$vm_data['cpu_count'],
+                'cores_per_socket' => (int)$vm_data['cores_per_socket']
+            ],
+            'memory' => [
+                'size_MiB' => (int)$vm_data['memory_size']
+            ]
+        ]
+    ];
+    
+    if (isset($vm_data['network']) && !empty($vm_data['network'])) {
+        $update_data['spec']['network'] = $vm_data['network'];
+    }
+    
+    if (isset($vm_data['storage_policy']) && !empty($vm_data['storage_policy'])) {
+        $update_data['spec']['storage_policy'] = $vm_data['storage_policy'];
+    }
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        "vmware-api-session-id: $session_id"
+    ]);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($update_data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    foreach ($curl_opts as $key => $value) {
+        curl_setopt($ch, $key, $value);
+    }
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    return $http_code === 204;
+}
 
+// Update handleFormSubmission function to handle both creation and editing
+function handleFormSubmission($session_id) {
+    global $vcenter_host, $curl_opts;
     $alerts = [];
 
-    if (empty($_POST['vm_name'])) {
-        $alerts[] = showError('VM name is required');
-    } else {
-        $vm_data = array(
-            'name' => $_POST['vm_name'],
-            'template' => $_POST['template'],
-            'datacenter' => $_POST['datacenter'],
-            'cluster' => $_POST['cluster'],
-            'resource_pool' => $_POST['resource_pool'],
-            'storage_policy' => $_POST['storage_policy'],
-            'ram' => $_POST['ram'],
-            'cpu_count' => $_POST['cpu_count'],
-            'cores_per_socket' => $_POST['cores_per_socket'],
-            'cpu_reservation' => $_POST['cpu_reservation'],
-            'cpu_limit' => $_POST['cpu_limit'],
-            'disk' => $_POST['disk'],
-            'disk_provisioning' => $_POST['disk_provisioning'],
-            'network' => $_POST['network'],
-            'mac_type' => $_POST['mac_type'],
-            'mac_address' => isset($_POST['mac_address']) ? $_POST['mac_address'] : null,
-            'post_creation_command' => isset($_POST['post_creation_command']) ? $_POST['post_creation_command'] : null,
-            'guest_username' => isset($_POST['guest_username']) ? $_POST['guest_username'] : null,
-            'guest_password' => isset($_POST['guest_password']) ? $_POST['guest_password'] : null,
-            'command_timeout' => isset($_POST['command_timeout']) ? intval($_POST['command_timeout']) : 60,
-            'os_type' => isset($_POST['os_type']) ? $_POST['os_type'] : 'linux'
-        );
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (isset($_POST['action']) && $_POST['action'] === 'edit_vm') {
+            // Handle VM edit
+            if (!isset($_POST['vm_id'])) {
+                $alerts[] = showError('VM ID is required');
+                return $alerts;
+            }
 
-        $result = createVMFromTemplate($vcenter_host, $session_id, $curl_opts, $vm_data['template'], $vm_data);
-        if ($result) {
-            $alerts[] = showError('VM creation started successfully!', 'success');
-
-            if (!empty($vm_data['post_creation_command']) && !empty($vm_data['guest_username']) && !empty($vm_data['guest_password'])) {
-                sleep($vm_data['command_timeout']);
-
-                $command_result = executeCommandInVM(
-                    $vcenter_host,
-                    $session_id,
-                    $curl_opts,
-                    $result['vm'],
-                    $vm_data['post_creation_command'],
-                    $vm_data['guest_username'],
-                    $vm_data['guest_password'],
-                    $vm_data['os_type']
-                );
-
-                if ($command_result) {
-                    $alerts[] = showError('Command execution started!', 'success');
-                } else {
-                    $alerts[] = showError('VM created but command execution failed.', 'warning');
-                }
+            $result = updateExistingVM($vcenter_host, $session_id, $curl_opts, $_POST['vm_id'], $_POST);
+            
+            if ($result) {
+                $alerts[] = showError('VM updated successfully!', 'success');
+            } else {
+                $alerts[] = showError('Failed to update VM');
             }
         } else {
-            $alerts[] = showError('Failed to create VM');
+            // Handle VM creation (existing code)
+            if (empty($_POST['vm_name'])) {
+                $alerts[] = showError('VM name is required');
+            } else {
+                $vm_data = array(
+                    'name' => $_POST['vm_name'],
+                    'template' => $_POST['template'],
+                    'datacenter' => $_POST['datacenter'],
+                    'cluster' => $_POST['cluster'],
+                    'resource_pool' => $_POST['resource_pool'],
+                    'storage_policy' => $_POST['storage_policy'],
+                    'ram' => $_POST['ram'],
+                    'cpu_count' => $_POST['cpu_count'],
+                    'cores_per_socket' => $_POST['cores_per_socket'],
+                    'cpu_reservation' => $_POST['cpu_reservation'],
+                    'cpu_limit' => $_POST['cpu_limit'],
+                    'disk' => $_POST['disk'],
+                    'disk_provisioning' => $_POST['disk_provisioning'],
+                    'network' => $_POST['network'],
+                    'mac_type' => $_POST['mac_type'],
+                    'mac_address' => isset($_POST['mac_address']) ? $_POST['mac_address'] : null,
+                    'post_creation_command' => isset($_POST['post_creation_command']) ? $_POST['post_creation_command'] : null,
+                    'guest_username' => isset($_POST['guest_username']) ? $_POST['guest_username'] : null,
+                    'guest_password' => isset($_POST['guest_password']) ? $_POST['guest_password'] : null,
+                    'command_timeout' => isset($_POST['command_timeout']) ? intval($_POST['command_timeout']) : 60,
+                    'os_type' => isset($_POST['os_type']) ? $_POST['os_type'] : 'linux'
+                );
+
+                $result = createVMFromTemplate($vcenter_host, $session_id, $curl_opts, $vm_data['template'], $vm_data);
+                if ($result) {
+                    $alerts[] = showError('VM creation started successfully!', 'success');
+
+                    if (!empty($vm_data['post_creation_command']) && !empty($vm_data['guest_username']) && !empty($vm_data['guest_password'])) {
+                        sleep($vm_data['command_timeout']);
+
+                        $command_result = executeCommandInVM(
+                            $vcenter_host,
+                            $session_id,
+                            $curl_opts,
+                            $result['vm'],
+                            $vm_data['post_creation_command'],
+                            $vm_data['guest_username'],
+                            $vm_data['guest_password'],
+                            $vm_data['os_type']
+                        );
+
+                        if ($command_result) {
+                            $alerts[] = showError('Command execution started!', 'success');
+                        } else {
+                            $alerts[] = showError('VM created but command execution failed.', 'warning');
+                        }
+                    }
+                } else {
+                    $alerts[] = showError('Failed to create VM');
+                }
+            }
         }
     }
-
+    
     return $alerts;
 }
 
@@ -730,4 +798,51 @@ function getVMAlerts($vcenter_host, $session_id, $curl_opts, $vm_id) {
         return json_decode($response, true);
     }
     return null;
+}
+
+function handleAjaxRequests() {
+    global $vcenter_host, $session_id, $curl_opts;
+    
+    if (!isset($_GET['action'])) {
+        return;
+    }
+
+    $action = $_GET['action'];
+    $response = ['success' => false];
+
+    switch ($action) {
+        case 'get_resource_pools':
+            // ... existing code ...
+            break;
+
+        case 'get_clusters':
+            // ... existing code ...
+            break;
+
+        case 'get_networks':
+            // ... existing code ...
+            break;
+
+        case 'get_storage_policies':
+            // ... existing code ...
+            break;
+
+        case 'get_vm_details':
+            if (!isset($_GET['vm_id'])) {
+                $response['message'] = 'VM ID is required';
+                break;
+            }
+            $vm_details = getVMDetails($vcenter_host, $session_id, $curl_opts, $_GET['vm_id']);
+            if ($vm_details) {
+                $response['success'] = true;
+                $response['vm'] = $vm_details;
+            } else {
+                $response['message'] = 'Failed to fetch VM details';
+            }
+            break;
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
 }

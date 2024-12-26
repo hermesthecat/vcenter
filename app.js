@@ -411,6 +411,102 @@ function initializeCharts(metrics) {
     });
 }
 
+// Edit VM Modal Functions
+function showEditVMModal(vmId, vmName) {
+    document.getElementById('editVMModal').style.display = 'block';
+    document.getElementById('edit_vm_id').value = vmId;
+    
+    // Fetch VM details and populate form
+    fetchFromAPI('backend.php', {
+        action: 'get_vm_details',
+        vm_id: vmId
+    })
+    .then(data => {
+        if (data.success) {
+            const vm = data.vm;
+            // Populate form fields with VM data
+            document.querySelector('#editVMForm input[name="vm_name"]').value = vm.name;
+            document.querySelector('#editVMForm input[name="cpu_count"]').value = vm.cpu_count;
+            document.querySelector('#editVMForm input[name="cores_per_socket"]').value = vm.cores_per_socket;
+            document.querySelector('#editVMForm input[name="memory_size"]').value = vm.memory_size_MiB;
+            
+            // Update dropdowns
+            updateClusters(vm.cluster);
+            updateResourcePools(vm.cluster, vm.resource_pool);
+            updateNetworks(vm.network);
+            updateStoragePolicies(vm.storage_policy);
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to fetch VM details',
+                icon: 'error'
+            });
+        }
+    });
+}
+
+function hideEditVMModal() {
+    document.getElementById('editVMModal').style.display = 'none';
+    document.getElementById('editVMForm').reset();
+}
+
+// Update form submission to handle both create and edit
+document.addEventListener('DOMContentLoaded', function() {
+    const createForm = document.getElementById('createVMForm');
+    const editForm = document.getElementById('editVMForm');
+
+    if (createForm) {
+        createForm.addEventListener('submit', handleFormSubmit);
+    }
+    
+    if (editForm) {
+        editForm.addEventListener('submit', handleFormSubmit);
+    }
+});
+
+function handleFormSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const isEdit = form.id === 'editVMForm';
+
+    // Validate form fields
+    if (!validateVMForm(form)) {
+        return;
+    }
+
+    // Submit form data
+    fetch('backend.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success',
+                text: isEdit ? 'VM updated successfully' : 'VM created successfully',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: data.message || 'An error occurred',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Error',
+            text: 'An error occurred while processing your request',
+            icon: 'error'
+        });
+    });
+}
+
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', function() {
     // VM Form event listeners

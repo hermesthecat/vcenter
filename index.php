@@ -71,6 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <a href="statistics.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="btn-small">
                                     View Details
                                 </a>
+                                <button class="btn-small edit-btn" onclick="showEditVMModal('<?php echo urlencode($vm['vm']); ?>', '<?php echo htmlspecialchars($vm['name'], ENT_QUOTES); ?>')">
+                                    Edit VM
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -103,6 +106,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="close-modal" onclick="hideCreateVMModal()">&times;</span>
                     <h2>Create New VM from Template</h2>
                     <form method="POST" id="createVMForm">
+                        <?php include 'vm_form.php'; ?>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit VM Modal -->
+            <div id="editVMModal" class="create-vm-modal">
+                <div class="create-vm-modal-content">
+                    <span class="close-modal" onclick="hideEditVMModal()">&times;</span>
+                    <h2>Edit Virtual Machine</h2>
+                    <form method="POST" id="editVMForm">
+                        <input type="hidden" name="action" value="edit_vm">
+                        <input type="hidden" name="vm_id" id="edit_vm_id">
                         <?php include 'vm_form.php'; ?>
                     </form>
                 </div>
