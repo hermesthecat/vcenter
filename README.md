@@ -27,7 +27,7 @@ Bu proje, VMware vCenter sunucusu üzerinde sanal makinelerin (VM) yönetimini s
   - CPU, RAM, disk boyutu ayarlama
   - Ağ ve depolama politikası seçimi
   - Kaynak havuzu ve küme seçimi
-- **İstatistikler Sayfası**:
+- **VM Detay Sayfası**:
   - CPU, RAM, disk ve ağ kullanım grafikleri
   - VMDK dosya yolları
   - VM ile ilgili son uyarılar
@@ -41,7 +41,7 @@ Bu proje, VMware vCenter sunucusu üzerinde sanal makinelerin (VM) yönetimini s
 
 ### Dosya Yapısı
 - `index.php`: Ana sayfa, VM listesi ve oluşturma modalı
-- `statistics.php`: VM detayları ve performans grafikleri
+- `view.php`: VM detayları ve performans grafikleri
 - `backend.php`: vCenter API işlemleri ve AJAX istekleri
 - `vm_form.php`: VM oluşturma form alanları
 - `app.js`: Tüm JavaScript fonksiyonları
@@ -68,7 +68,7 @@ This project provides a web-based interface for managing virtual machines (VMs) 
   - Configure CPU, RAM, disk size
   - Select network and storage policy
   - Choose resource pool and cluster
-- **Statistics Page**:
+- **VM Detail Page**:
   - CPU, RAM, disk, and network usage graphs
   - VMDK file paths
   - Recent VM alerts
@@ -82,7 +82,7 @@ This project provides a web-based interface for managing virtual machines (VMs) 
 
 ### File Structure
 - `index.php`: Main page, VM list and creation modal
-- `statistics.php`: VM details and performance graphs
+- `view.php`: VM details and performance graphs
 - `backend.php`: vCenter API operations and AJAX requests
 - `vm_form.php`: VM creation form fields
 - `app.js`: All JavaScript functions

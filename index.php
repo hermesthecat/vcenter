@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php foreach ($vms['value'] as $vm): ?>
                         <tr>
                             <td>
-                                <a href="statistics.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="vm-name">
+                                <a href="view.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="vm-name">
                                     <?php echo htmlspecialchars($vm['name']); ?>
                                 </a>
                             </td>
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <td><?php echo htmlspecialchars($vm['cpu_count']); ?></td>
                             <td><?php echo htmlspecialchars($vm['memory_size_MiB']); ?></td>
                             <td>
-                                <a href="statistics.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="btn-small">
+                                <a href="view.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="btn-small">
                                     View Details
                                 </a>
                                 <button class="btn-small edit-btn" onclick="showEditVMModal('<?php echo urlencode($vm['vm']); ?>', '<?php echo htmlspecialchars($vm['name'], ENT_QUOTES); ?>')">
