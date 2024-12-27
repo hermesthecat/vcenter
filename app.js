@@ -4,23 +4,92 @@ let vmwareSessionId = null;
 // Utility function for making AJAX requests
 async function fetchFromAPI(url, options = {}) {
     try {
+        // Add session ID to headers if available
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (vmwareSessionId) {
+            headers['X-VMware-Session-ID'] = vmwareSessionId;
+        }
+
         const response = await fetch(url, {
             ...options,
             headers: {
-                'Content-Type': 'application/json',
+                ...headers,
                 ...options.headers
             }
         });
         
+        // Get new session ID from response header
+        const newSessionId = response.headers.get('X-VMware-Session-ID');
+        if (newSessionId) {
+            vmwareSessionId = newSessionId;
+        }
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
         return data;
     } catch (error) {
         console.error('Error:', error);
+        // Clear session ID if authentication failed
+        if (error.message.includes('Authentication failed')) {
+            vmwareSessionId = null;
+        }
         throw error;
+    }
+}
+
+// Function to validate form data
+function validateFormData(formData, requiredFields) {
+    const missingFields = [];
+    requiredFields.forEach(field => {
+        if (!formData.get(field)) {
+            const element = document.querySelector(`[name="${field}"]`);
+            if (element) {
+                missingFields.push(element.previousElementSibling.textContent.replace(' *', ''));
+            }
+        }
+    });
+    return missingFields;
+}
+
+// Generic form submission handler
+async function handleFormSubmit(form, action, successMessage) {
+    try {
+        const formData = new FormData(form);
+        formData.append('action', action);
+
+        const response = await fetch('backend.php', {
+            method: 'POST',
+            body: formData,
+            headers: vmwareSessionId ? {
+                'X-VMware-Session-ID': vmwareSessionId
+            } : {}
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            await Swal.fire({
+                title: 'Success',
+                text: result.message || successMessage,
+                icon: 'success'
+            });
+            return true;
+        } else {
+            throw new Error(result.error || 'Operation failed');
+        }
+    } catch (error) {
+        await Swal.fire({
+            title: 'Error',
+            text: error.message || 'An error occurred',
+            icon: 'error'
+        });
+        return false;
     }
 }
 
@@ -147,13 +216,7 @@ document.getElementById('vmForm').addEventListener('submit', async function(even
         'network', 'storage_policy', 'ram', 'cpu_count', 'cores_per_socket', 'disk'
     ];
     
-    const missingFields = [];
-    requiredFields.forEach(field => {
-        const element = document.getElementById(field);
-        if (!element.value) {
-            missingFields.push(element.previousElementSibling.textContent.replace(' *', ''));
-        }
-    });
+    const missingFields = validateFormData(new FormData(this), requiredFields);
     
     if (missingFields.length > 0) {
         Swal.fire({
@@ -267,35 +330,32 @@ document.getElementById('createSnapshotForm').addEventListener('submit', async f
 document.getElementById('editVMForm')?.addEventListener('submit', async function(event) {
     event.preventDefault();
     
-    try {
-        const formData = new FormData(this);
-        const response = await fetch('backend.php', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-            Swal.fire({
-                title: 'Success',
-                text: result.message || 'VM updated successfully',
-                icon: 'success'
-            }).then(() => {
-                hideModal();
-                window.location.reload();
-            });
-        } else {
-            Swal.fire({
-                title: 'Error',
-                text: result.message || 'Failed to update VM',
-                icon: 'error'
-            });
-        }
-    } catch (error) {
+    // Validate required fields
+    const requiredFields = ['vm_name', 'cpu_count', 'cores_per_socket', 'memory_size'];
+    const missingFields = validateFormData(new FormData(this), requiredFields);
+    
+    if (missingFields.length > 0) {
         Swal.fire({
-            title: 'Error',
-            text: 'An error occurred while updating the VM',
+            title: 'Validation Error',
+            text: `Please fill in the following required fields: ${missingFields.join(', ')}`,
             icon: 'error'
         });
+        return;
+    }
+    
+    // Validate memory size
+    const memorySize = parseInt(this.querySelector('[name="memory_size"]').value);
+    if (memorySize < 1024) {
+        Swal.fire({
+            title: 'Validation Error',
+            text: 'Memory size must be at least 1024 MB (1 GB)',
+            icon: 'error'
+        });
+        return;
+    }
+    
+    if (await handleFormSubmit(this, 'edit_vm', 'VM updated successfully')) {
+        hideModal();
+        window.location.reload();
     }
 }); 

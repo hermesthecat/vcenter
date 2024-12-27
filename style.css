@@ -185,3 +185,108 @@ h2 {
         padding: 3px 6px;
     }
 } 
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #333;
+}
+
+.modal h2 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Form action buttons */
+.form-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.btn-submit {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.btn-cancel {
+    background-color: #f44336;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-submit:hover {
+    background-color: #45a049;
+}
+
+.btn-cancel:hover {
+    background-color: #da190b;
+}
+
+/* Edit VM button */
+.edit-vm-btn {
+    float: right;
+    margin-bottom: 10px;
+    background-color: #2196F3;
+}
+
+.edit-vm-btn:hover {
+    background-color: #1976D2;
+}
+
+/* Responsive modal */
+@media screen and (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .form-actions {
+        text-align: center;
+    }
+    
+    .btn-submit,
+    .btn-cancel {
+        width: 100%;
+        margin: 5px 0;
+    }
+} 
