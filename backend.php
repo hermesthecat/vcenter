@@ -652,6 +652,25 @@ if (isset($_GET['action'])) {
                 }
                 break;
 
+            case 'edit_vm':
+                if (!isset($_POST['vm_id'])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'VM ID is required']);
+                    exit;
+                }
+
+                $result = updateExistingVM($vcenter_host, $session_id, $curl_opts, $_POST['vm_id'], $_POST);
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'VM updated successfully'
+                    ]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(['error' => 'Failed to update VM']);
+                }
+                break;
+
             default:
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid action']);

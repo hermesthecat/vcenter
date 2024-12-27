@@ -53,6 +53,7 @@ if (!$details && !$metrics) {
         <?php if ($details): ?>
             <div class="vm-details">
                 <h2>VM Details</h2>
+                <button class="btn edit-vm-btn" onclick="showEditVMModal('<?php echo htmlspecialchars($vm_id); ?>', '<?php echo htmlspecialchars($vm_name); ?>')">Edit VM</button>
                 <table>
                     <tr>
                         <th>Power State</th>
@@ -171,6 +172,43 @@ if (!$details && !$metrics) {
                         </label>
                     </div>
                     <button type="submit" class="btn-submit">Create Snapshot</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit VM Modal -->
+        <div id="editVMModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="hideModal()">&times;</span>
+                <h2>Edit Virtual Machine</h2>
+                <form id="editVMForm">
+                    <input type="hidden" name="action" value="edit_vm">
+                    <input type="hidden" name="vm_id" value="<?php echo htmlspecialchars($vm_id); ?>">
+                    
+                    <div class="form-group">
+                        <label for="edit_vm_name">VM Name</label>
+                        <input type="text" id="edit_vm_name" name="vm_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_cpu_count">CPU Count</label>
+                        <input type="number" id="edit_cpu_count" name="cpu_count" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_cores_per_socket">Cores Per Socket</label>
+                        <input type="number" id="edit_cores_per_socket" name="cores_per_socket" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_memory_size">Memory (MB)</label>
+                        <input type="number" id="edit_memory_size" name="memory_size" min="1024" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">Update VM</button>
+                        <button type="button" class="btn-cancel" onclick="hideModal()">Cancel</button>
+                    </div>
                 </form>
             </div>
         </div>

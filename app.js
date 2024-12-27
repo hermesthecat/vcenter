@@ -102,26 +102,14 @@ async function showEditVMModal(vmId, vmName) {
     try {
         const data = await fetchFromAPI(`backend.php?action=get_vm_details&vm_id=${vmId}`);
         const modal = document.getElementById('editVMModal');
-        const form = document.getElementById('vmForm');
+        const form = document.getElementById('editVMForm');
         
-        form.querySelector('#form_action').value = 'edit_vm';
-        form.querySelector('#vm_id').value = vmId;
-        form.querySelector('#vm_name').value = vmName;
-        
-        // Populate form fields with VM details
         if (data.success && data.vm) {
             const vm = data.vm;
-            form.querySelector('#cpu_count').value = vm.cpu_count;
-            form.querySelector('#cores_per_socket').value = vm.cores_per_socket;
-            form.querySelector('#ram').value = Math.round(vm.memory_size_MiB / 1024);
-            
-            // Set other field values if available
-            if (vm.network) {
-                form.querySelector('#network').value = vm.network;
-            }
-            if (vm.storage_policy) {
-                form.querySelector('#storage_policy').value = vm.storage_policy;
-            }
+            form.querySelector('input[name="vm_name"]').value = vm.name;
+            form.querySelector('input[name="cpu_count"]').value = vm.cpu_count;
+            form.querySelector('input[name="cores_per_socket"]').value = vm.cores_per_socket;
+            form.querySelector('input[name="memory_size"]').value = vm.memory_size_MiB;
         }
         
         modal.style.display = 'block';
@@ -270,6 +258,43 @@ document.getElementById('createSnapshotForm').addEventListener('submit', async f
         Swal.fire({
             title: 'Error',
             text: 'An error occurred while creating the snapshot',
+            icon: 'error'
+        });
+    }
+});
+
+// Edit VM form submission handler
+document.getElementById('editVMForm')?.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    try {
+        const formData = new FormData(this);
+        const response = await fetch('backend.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            Swal.fire({
+                title: 'Success',
+                text: result.message || 'VM updated successfully',
+                icon: 'success'
+            }).then(() => {
+                hideModal();
+                window.location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: result.message || 'Failed to update VM',
+                icon: 'error'
+            });
+        }
+    } catch (error) {
+        Swal.fire({
+            title: 'Error',
+            text: 'An error occurred while updating the VM',
             icon: 'error'
         });
     }
