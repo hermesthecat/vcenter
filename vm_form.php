@@ -1,195 +1,167 @@
 <?php
 // This file contains the VM creation form fields
 ?>
-<div class="form-group">
-    <label>VM Name:</label>
-    <input type="text" name="vm_name" class="form-control" required>
-</div>
+<form method="POST" id="vmForm">
+    <input type="hidden" name="action" value="create_vm" id="form_action">
+    <input type="hidden" name="vm_id" id="vm_id">
 
-<div class="form-group">
-    <label>Template:</label>
-    <select name="template" class="form-control" required>
-        <?php foreach ($templates['value'] as $template): ?>
-            <option value="<?php echo htmlspecialchars($template['vm']); ?>">
-                <?php echo htmlspecialchars($template['name']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>Datacenter:</label>
-    <select name="datacenter" class="form-control" required>
-        <?php foreach ($datacenters['value'] as $datacenter): ?>
-            <option value="<?php echo htmlspecialchars($datacenter['datacenter']); ?>">
-                <?php echo htmlspecialchars($datacenter['name']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>Cluster:</label>
-    <select name="cluster" id="cluster" class="form-control" required onchange="updateResourcePools()">
-        <?php foreach ($clusters['value'] as $cluster): ?>
-            <option value="<?php echo htmlspecialchars($cluster['cluster']); ?>">
-                <?php echo htmlspecialchars($cluster['name']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>Resource Pool:</label>
-    <select name="resource_pool" id="resource_pool" class="form-control" required>
-        <?php foreach ($resource_pools['value'] as $pool): ?>
-            <option value="<?php echo htmlspecialchars($pool['resource_pool']); ?>">
-                <?php echo htmlspecialchars($pool['name']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>CPU Configuration:</label>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-            <label>CPU Count:</label>
-            <input type="number" name="cpu_count" class="form-control" required min="1" value="1">
-        </div>
-        <div>
-            <label>Cores Per Socket:</label>
-            <input type="number" name="cores_per_socket" class="form-control" required min="1" value="1">
-        </div>
-    </div>
-</div>
-
-<div class="form-group">
-    <label>CPU Resource Limits:</label>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-            <label>CPU Reservation (MHz):</label>
-            <input type="number" name="cpu_reservation" class="form-control" min="0" placeholder="Optional">
-            <div class="help-text">Guaranteed minimum CPU allocation</div>
-        </div>
-        <div>
-            <label>CPU Limit (MHz):</label>
-            <input type="number" name="cpu_limit" class="form-control" min="0" placeholder="Optional">
-            <div class="help-text">Maximum CPU allocation (0 = unlimited)</div>
-        </div>
-    </div>
-</div>
-
-<div class="form-group">
-    <label>RAM (GB):</label>
-    <input type="number" name="ram" class="form-control" required min="1" value="4">
-</div>
-
-<div class="form-group">
-    <label>Disk Size (GB):</label>
-    <input type="number" name="disk" class="form-control" required min="10" value="40">
-</div>
-
-<div class="form-group">
-    <label>Disk Provisioning Type:</label>
-    <select name="disk_provisioning" class="form-control" required>
-        <option value="THIN">Thin Provision</option>
-        <option value="THICK_LAZY_ZEROED">Thick Provision Lazy Zeroed</option>
-        <option value="THICK_EAGER_ZEROED">Thick Provision Eager Zeroed</option>
-    </select>
-    <div class="help-text">
-        <ul>
-            <li><strong>Thin:</strong> Allocates storage on demand (best for storage saving)</li>
-            <li><strong>Thick Lazy:</strong> Allocates all space immediately but zeroes on demand</li>
-            <li><strong>Thick Eager:</strong> Allocates and zeroes all space immediately (best for performance)</li>
-        </ul>
-    </div>
-</div>
-
-<div class="form-group">
-    <label>Network:</label>
-    <select name="network" class="form-control" required>
-        <?php foreach ($networks['value'] as $network): ?>
-            <option value="<?php echo htmlspecialchars($network['network']); ?>">
-                <?php echo htmlspecialchars($network['name']) .
-                    (isset($network['type']) ? " (" . htmlspecialchars($network['type']) . ")" : ""); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-    <div class="help-text">
-        Network types: STANDARD_PORTGROUP (vSwitch), DISTRIBUTED_PORTGROUP (Distributed vSwitch)
-    </div>
-</div>
-
-<div class="form-group">
-    <label>MAC Address Type:</label>
-    <select name="mac_type" id="mac_type" class="form-control" onchange="toggleMacAddress()">
-        <option value="GENERATED">Auto-generated</option>
-        <option value="MANUAL">Manual Entry</option>
-    </select>
-</div>
-
-<div class="form-group" id="mac_address_div" style="display: none;">
-    <label>MAC Address:</label>
-    <input type="text" name="mac_address" class="form-control"
-        pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
-        placeholder="00:11:22:33:44:55">
-    <div class="help-text">Format: XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX</div>
-</div>
-
-<div class="form-group">
-    <label>Guest OS Type:</label>
-    <select name="os_type" id="os_type" class="form-control" onchange="updateCommandPlaceholder()">
-        <option value="linux">Linux</option>
-        <option value="windows">Windows</option>
-    </select>
-</div>
-
-<div class="form-group">
-    <label>Execute Command After Creation:</label>
-    <textarea name="post_creation_command" id="command_textarea" class="form-control" rows="5"
-        style="font-family: monospace;"></textarea>
-    <div class="help-text" id="command_example"></div>
-</div>
-
-<div class="form-group command-options" style="display: none;">
-    <h3>Command Execution Settings</h3>
     <div class="form-group">
-        <label>Guest OS Username:</label>
-        <input type="text" name="guest_username" class="form-control">
+        <label for="vm_name">VM Name *</label>
+        <input type="text" id="vm_name" name="vm_name" required>
     </div>
 
     <div class="form-group">
-        <label>Guest OS Password:</label>
-        <input type="password" name="guest_password" class="form-control">
+        <label for="template">Template *</label>
+        <select id="template" name="template" required>
+            <option value="">Select Template</option>
+            <?php if ($templates && isset($templates['value'])): ?>
+                <?php foreach ($templates['value'] as $template): ?>
+                    <option value="<?php echo htmlspecialchars($template['template']); ?>">
+                        <?php echo htmlspecialchars($template['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
     </div>
 
     <div class="form-group">
-        <label>Command Execution Timeout (seconds):</label>
-        <input type="number" name="command_timeout" class="form-control"
-            value="60" min="30" max="300">
-        <div class="help-text">Time to wait for VM to be ready (30-300 seconds)</div>
+        <label for="datacenter">Datacenter *</label>
+        <select id="datacenter" name="datacenter" required onchange="updateClusters()">
+            <option value="">Select Datacenter</option>
+            <?php if ($data['datacenters'] && isset($data['datacenters']['value'])): ?>
+                <?php foreach ($data['datacenters']['value'] as $datacenter): ?>
+                    <option value="<?php echo htmlspecialchars($datacenter['datacenter']); ?>">
+                        <?php echo htmlspecialchars($datacenter['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
     </div>
-</div>
 
-<div class="form-group">
-    <label>Storage Policy:</label>
-    <select name="storage_policy" class="form-control" required>
-        <option value="">Select Storage Policy</option>
-        <?php if (isset($storage_policies['value'])): ?>
-            <?php foreach ($storage_policies['value'] as $policy): ?>
-                <option value="<?php echo htmlspecialchars($policy['policy']); ?>">
-                    <?php echo htmlspecialchars($policy['name']); ?>
-                    <?php if (isset($policy['description'])): ?>
-                        (<?php echo htmlspecialchars($policy['description']); ?>)
-                    <?php endif; ?>
-                </option>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </select>
-    <div class="help-text">
-        Select a storage policy to apply to the VM's disks
+    <div class="form-group">
+        <label for="cluster">Cluster *</label>
+        <select id="cluster" name="cluster" required onchange="updateResourcePools()">
+            <option value="">Select Cluster</option>
+        </select>
     </div>
-</div>
 
-<button type="submit" class="btn">Create VM</button> 
+    <div class="form-group">
+        <label for="resource_pool">Resource Pool *</label>
+        <select id="resource_pool" name="resource_pool" required>
+            <option value="">Select Resource Pool</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="network">Network *</label>
+        <select id="network" name="network" required>
+            <option value="">Select Network</option>
+            <?php if ($data['networks'] && isset($data['networks']['value'])): ?>
+                <?php foreach ($data['networks']['value'] as $network): ?>
+                    <option value="<?php echo htmlspecialchars($network['network']); ?>">
+                        <?php echo htmlspecialchars($network['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="storage_policy">Storage Policy *</label>
+        <select id="storage_policy" name="storage_policy" required>
+            <option value="">Select Storage Policy</option>
+            <?php if ($data['storage_policies'] && isset($data['storage_policies']['value'])): ?>
+                <?php foreach ($data['storage_policies']['value'] as $policy): ?>
+                    <option value="<?php echo htmlspecialchars($policy['policy']); ?>">
+                        <?php echo htmlspecialchars($policy['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="ram">RAM (GB) *</label>
+        <input type="number" id="ram" name="ram" min="1" required>
+    </div>
+
+    <div class="form-group">
+        <label for="cpu_count">CPU Count *</label>
+        <input type="number" id="cpu_count" name="cpu_count" min="1" required>
+    </div>
+
+    <div class="form-group">
+        <label for="cores_per_socket">Cores Per Socket *</label>
+        <input type="number" id="cores_per_socket" name="cores_per_socket" min="1" required>
+    </div>
+
+    <div class="form-group">
+        <label for="disk">Disk Size (GB) *</label>
+        <input type="number" id="disk" name="disk" min="1" required>
+    </div>
+
+    <div class="form-group">
+        <label for="disk_provisioning">Disk Provisioning *</label>
+        <select id="disk_provisioning" name="disk_provisioning" required>
+            <option value="thin">Thin</option>
+            <option value="thick">Thick</option>
+            <option value="eagerZeroedThick">Eager Zeroed Thick</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="mac_type">MAC Address Type *</label>
+        <select id="mac_type" name="mac_type" required onchange="toggleMacAddress()">
+            <option value="GENERATED">Generated</option>
+            <option value="MANUAL">Manual</option>
+        </select>
+    </div>
+
+    <div class="form-group" id="mac_address_group" style="display: none;">
+        <label for="mac_address">MAC Address</label>
+        <input type="text" id="mac_address" name="mac_address" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$">
+        <small>Format: XX:XX:XX:XX:XX:XX</small>
+    </div>
+
+    <div class="form-group">
+        <label>
+            <input type="checkbox" id="show_command" onchange="toggleCommand()">
+            Execute Command After Creation
+        </label>
+    </div>
+
+    <div id="command_options" style="display: none;">
+        <div class="form-group">
+            <label for="os_type">Guest OS Type</label>
+            <select id="os_type" name="os_type">
+                <option value="linux">Linux</option>
+                <option value="windows">Windows</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="guest_username">Guest Username</label>
+            <input type="text" id="guest_username" name="guest_username">
+        </div>
+
+        <div class="form-group">
+            <label for="guest_password">Guest Password</label>
+            <input type="password" id="guest_password" name="guest_password">
+        </div>
+
+        <div class="form-group">
+            <label for="post_creation_command">Command to Execute</label>
+            <textarea id="post_creation_command" name="post_creation_command"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="command_timeout">Command Timeout (seconds)</label>
+            <input type="number" id="command_timeout" name="command_timeout" value="60" min="1">
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn-submit">Submit</button>
+        <button type="button" class="btn-cancel" onclick="hideModal()">Cancel</button>
+    </div>
+</form> 

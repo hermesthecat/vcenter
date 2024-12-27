@@ -98,287 +98,90 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
-}
-
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 th {
     background-color: #f5f5f5;
+    color: #333;
     font-weight: bold;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    white-space: nowrap;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
 }
 
 tr:hover {
     background-color: #f9f9f9;
 }
 
-/* VM status styles */
-.vm-status {
-    padding: 5px 10px;
+/* Status indicators */
+.host-status,
+.datacenter-status,
+.feature-status {
+    display: inline-block;
+    padding: 4px 8px;
     border-radius: 4px;
-    font-size: 14px;
+    font-weight: bold;
+    font-size: 0.9em;
+    text-transform: uppercase;
 }
 
-.status-powered_on {
+.status-connected,
+.status-poweredon,
+.status-enabled {
     background-color: #4CAF50;
     color: white;
 }
 
-.status-powered_off {
+.status-disconnected,
+.status-poweredoff,
+.status-disabled {
     background-color: #f44336;
     color: white;
 }
 
-.status-suspended {
-    background-color: #ff9800;
-    color: white;
-}
-
-/* VM name styles */
-.vm-name {
-    color: #2196F3;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.vm-name:hover {
-    text-decoration: underline;
-}
-
-/* Modal styles */
-.create-vm-modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-}
-
-.create-vm-modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 800px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.close-modal {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close-modal:hover,
-.close-modal:focus {
-    color: #000;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-/* Statistics page styles */
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.back-button {
+.datacenter-status {
     background-color: #2196F3;
     color: white;
-    padding: 8px 16px;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 14px;
 }
 
-.back-button:hover {
-    background-color: #1976D2;
-}
-
-.vm-details {
-    margin-bottom: 30px;
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 4px;
-}
-
-.vm-details table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.vm-details th {
-    width: 200px;
-    text-align: left;
-    padding: 8px;
-    background-color: #e9ecef;
-}
-
-.vm-details td {
-    padding: 8px;
-}
-
-.vm-details tr:nth-child(even) {
-    background-color: #ffffff;
-}
-
-.charts-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
-}
-
-.chart-box {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* Alerts section styles */
-.alerts-section {
+/* Section headings */
+h2 {
     margin-top: 30px;
-}
-
-.alerts-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.alerts-table th,
-.alerts-table td {
-    padding: 10px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-.alerts-table th {
-    background-color: #f5f5f5;
-    font-weight: bold;
-}
-
-.alert-severity-critical { color: #d9534f; }
-.alert-severity-warning { color: #f0ad4e; }
-.alert-severity-info { color: #5bc0de; }
-
-.alert-time {
-    font-size: 0.9em;
-    color: #666;
-}
-
-.edit-btn {
-    background-color: #4CAF50;
-    color: white;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 5px;
-}
-
-.edit-btn:hover {
-    background-color: #45a049;
-}
-
-.btn-submit {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.btn-submit:hover {
-    background-color: #45a049;
-}
-
-/* Snapshots section styles */
-.snapshots-section {
-    margin-top: 30px;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.create-snapshot-btn {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 20px;
-}
-
-.create-snapshot-btn:hover {
-    background-color: #45a049;
-}
-
-.snapshots-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.snapshots-table th,
-.snapshots-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.snapshots-table th {
-    background-color: #f5f5f5;
-    font-weight: bold;
-}
-
-.snapshots-table tr:hover {
-    background-color: #f9f9f9;
-}
-
-#createSnapshotForm textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: vertical;
-    min-height: 100px;
-    box-sizing: border-box;
-}
-
-#createSnapshotForm .form-group {
     margin-bottom: 15px;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    font-size: 1.5em;
 }
 
-#createSnapshotForm label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-#createSnapshotForm input[type="checkbox"] {
-    margin-right: 5px;
-}
-
-#createSnapshotForm input[type="checkbox"] + label {
-    display: inline;
-    font-weight: normal;
+/* Responsive tables */
+@media screen and (max-width: 768px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    th, td {
+        min-width: 120px;
+    }
+    
+    .host-status,
+    .datacenter-status,
+    .feature-status {
+        font-size: 0.8em;
+        padding: 3px 6px;
+    }
 } 

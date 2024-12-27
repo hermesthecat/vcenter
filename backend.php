@@ -431,68 +431,46 @@ function getVMDetails($vcenter_host, $session_id, $curl_opts, $vm_id)
     return null;
 }
 
-// Function to initialize vCenter connection and get initial data
-function initializeVCenter()
-{
-    global $vcenter_host, $username, $password, $curl_opts;
-
-    $alerts = [];
-    $data = [];
-
-    try {
-        $session_id = getSessionId($vcenter_host, $username, $password, $curl_opts);
-
-        if ($session_id) {
-            try {
-                $data['templates'] = getTemplates($vcenter_host, $session_id, $curl_opts);
-                if (!$data['templates']) {
-                    $alerts[] = showError('Failed to fetch templates', 'warning');
-                }
-
-                $data['datacenters'] = getDatacenters($vcenter_host, $session_id, $curl_opts);
-                if (!$data['datacenters']) {
-                    $alerts[] = showError('Failed to fetch datacenters', 'warning');
-                }
-
-                $data['networks'] = getNetworks($vcenter_host, $session_id, $curl_opts);
-                if (!$data['networks']) {
-                    $alerts[] = showError('Failed to fetch networks', 'warning');
-                }
-
-                $data['clusters'] = getClusters($vcenter_host, $session_id, $curl_opts);
-                if (!$data['clusters']) {
-                    $alerts[] = showError('Failed to fetch clusters', 'warning');
-                }
-
-                $data['resource_pools'] = getResourcePools($vcenter_host, $session_id, $curl_opts);
-                if (!$data['resource_pools']) {
-                    $alerts[] = showError('Failed to fetch resource pools', 'warning');
-                }
-
-                $data['storage_policies'] = getStoragePolicies($vcenter_host, $session_id, $curl_opts);
-                if (!$data['storage_policies']) {
-                    $alerts[] = showError('Failed to fetch storage policies', 'warning');
-                }
-
-                $data['vms'] = getVMs($vcenter_host, $session_id, $curl_opts);
-                if (!$data['vms']) {
-                    $alerts[] = showError('Failed to fetch VMs', 'warning');
-                }
-            } catch (Exception $e) {
-                $alerts[] = showError('Error processing request: ' . $e->getMessage());
-            }
-        } else {
-            $alerts[] = showError('Failed to authenticate with vCenter');
-        }
-    } catch (Exception $e) {
-        $alerts[] = showError('System error: ' . $e->getMessage());
+// Function to get hosts
+function getHosts($vcenter_host, $session_id, $curl_opts = array()) {
+    $url = "https://$vcenter_host/rest/vcenter/host";
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        "vmware-api-session-id: $session_id"
+    ));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    foreach ($curl_opts as $key => $value) {
+        curl_setopt($ch, $key, $value);
     }
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code === 200) {
+        return json_decode($response, true);
+    }
+    return null;
+}
 
-    return [
-        'session_id' => $session_id,
-        'alerts' => $alerts,
-        'data' => $data
-    ];
+// Function to initialize vCenter connection and get initial data
+function initializeVCenter($vcenter_host, $username, $password) {
+    global $curl_opts;
+    
+    $session_id = getSessionId($vcenter_host, $username, $password, $curl_opts);
+    if ($session_id) {
+        $data = array();
+        $data['vms'] = getVMs($vcenter_host, $session_id, $curl_opts);
+        $data['hosts'] = getHosts($vcenter_host, $session_id, $curl_opts);
+        $data['datacenters'] = getDatacenters($vcenter_host, $session_id, $curl_opts);
+        $data['clusters'] = getClusters($vcenter_host, $session_id, $curl_opts);
+        $data['templates'] = getTemplates($vcenter_host, $session_id, $curl_opts);
+        return $data;
+    }
+    return null;
 }
 
 // Function to check if session is valid

@@ -1,139 +1,172 @@
 <?php
 require_once 'backend.php';
 
-// Initialize vCenter connection and get data
-$vcenter_data = initializeVCenter();
-$session_id = $vcenter_data['session_id'];
-$alerts = $vcenter_data['alerts'];
-$data = $vcenter_data['data'];
+// Initialize vCenter connection and get initial data
+$data = initializeVCenter($vcenter_host, $username, $password);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $alerts = array_merge($alerts, handleFormSubmission($session_id));
+    $alerts = handleFormSubmission($session_id);
 }
+
+// Get templates for VM creation
+$templates = $data['templates'] ?? null;
+$vms = $data['vms'] ?? null;
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>vCenter VM Creation</title>
+    <title>vCenter Management</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
-        <?php if (!empty($alerts)): ?>
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    <?php foreach ($alerts as $alert): ?>
-                        Swal.fire({
-                            title: '<?php echo addslashes($alert['alert_title']); ?>',
-                            text: '<?php echo addslashes($alert['alert_message']); ?>',
-                            icon: '<?php echo $alert['alert_type']; ?>',
-                            confirmButtonColor: '<?php echo $alert['alert_type'] === 'error' ? '#d33' : ($alert['alert_type'] === 'warning' ? '#f8bb86' : '#4CAF50'); ?>'
-                        });
-                    <?php endforeach; ?>
-                });
-            </script>
+        <?php if (isset($alerts)): ?>
+            <?php foreach ($alerts as $alert): ?>
+                <script>
+                    Swal.fire({
+                        title: '<?php echo $alert['alert_title']; ?>',
+                        text: '<?php echo $alert['alert_message']; ?>',
+                        icon: '<?php echo $alert['alert_type']; ?>'
+                    });
+                </script>
+            <?php endforeach; ?>
         <?php endif; ?>
 
-        <?php if ($session_id): ?>
-            <div style="margin-bottom: 20px;">
-                <button class="create-button" onclick="showCreateVMModal()">Create New VM</button>
-            </div>
-
-            <?php if ($vms && isset($vms['value'])): ?>
-                <h2>Virtual Machines</h2>
-                <table>
+        <!-- Virtual Machines Section -->
+        <?php if ($vms && isset($vms['value'])): ?>
+            <h2>Virtual Machines</h2>
+            <button class="create-vm-btn" onclick="showCreateVMModal()">Create New VM</button>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Power State</th>
+                    <th>CPU Count</th>
+                    <th>Memory (GB)</th>
+                    <th>Actions</th>
+                </tr>
+                <?php foreach ($vms['value'] as $vm): ?>
                     <tr>
-                        <th>Name</th>
-                        <th>Power State</th>
-                        <th>CPU Count</th>
-                        <th>Memory Size (MB)</th>
-                        <th>Actions</th>
+                        <td>
+                            <a href="view.php?vm_id=<?php echo htmlspecialchars($vm['vm']); ?>&vm_name=<?php echo htmlspecialchars($vm['name']); ?>" class="vm-name">
+                                <?php echo htmlspecialchars($vm['name']); ?>
+                            </a>
+                        </td>
+                        <td>
+                            <span class="vm-status status-<?php echo strtolower($vm['power_state']); ?>">
+                                <?php echo htmlspecialchars($vm['power_state']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo htmlspecialchars($vm['cpu_count']); ?></td>
+                        <td><?php echo htmlspecialchars(round($vm['memory_size_MiB'] / 1024, 2)); ?></td>
+                        <td>
+                            <button class="edit-btn" onclick="showEditVMModal('<?php echo $vm['vm']; ?>', '<?php echo $vm['name']; ?>')">Edit</button>
+                        </td>
                     </tr>
-                    <?php foreach ($vms['value'] as $vm): ?>
-                        <tr>
-                            <td>
-                                <a href="view.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="vm-name">
-                                    <?php echo htmlspecialchars($vm['name']); ?>
-                                </a>
-                            </td>
-                            <td>
-                                <span class="vm-status status-<?php echo strtolower($vm['power_state']); ?>">
-                                    <?php echo htmlspecialchars($vm['power_state']); ?>
-                                </span>
-                            </td>
-                            <td><?php echo htmlspecialchars($vm['cpu_count']); ?></td>
-                            <td><?php echo htmlspecialchars($vm['memory_size_MiB']); ?></td>
-                            <td>
-                                <a href="view.php?vm_id=<?php echo urlencode($vm['vm']); ?>&vm_name=<?php echo urlencode($vm['name']); ?>" class="btn-small">
-                                    View Details
-                                </a>
-                                <button class="btn-small edit-btn" onclick="showEditVMModal('<?php echo urlencode($vm['vm']); ?>', '<?php echo htmlspecialchars($vm['name'], ENT_QUOTES); ?>')">
-                                    Edit VM
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </table>
-            <?php endif; ?>
-
-            <?php if ($templates): ?>
-                <h2>Available Templates</h2>
-                <table>
-                    <tr>
-                        <th>Name</th>
-                        <th>Power State</th>
-                        <th>CPU Count</th>
-                        <th>Memory Size (MB)</th>
-                    </tr>
-                    <?php foreach ($templates['value'] as $template): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($template['name']); ?></td>
-                            <td><?php echo htmlspecialchars($template['power_state']); ?></td>
-                            <td><?php echo htmlspecialchars($template['cpu_count']); ?></td>
-                            <td><?php echo htmlspecialchars($template['memory_size_MiB']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </table>
-            <?php endif; ?>
-
-            <!-- Create VM Modal -->
-            <div id="createVMModal" class="create-vm-modal">
-                <div class="create-vm-modal-content">
-                    <span class="close-modal" onclick="hideCreateVMModal()">&times;</span>
-                    <h2>Create New VM from Template</h2>
-                    <form method="POST" id="createVMForm">
-                        <?php include 'vm_form.php'; ?>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Edit VM Modal -->
-            <div id="editVMModal" class="create-vm-modal">
-                <div class="create-vm-modal-content">
-                    <span class="close-modal" onclick="hideEditVMModal()">&times;</span>
-                    <h2>Edit Virtual Machine</h2>
-                    <form method="POST" id="editVMForm">
-                        <input type="hidden" name="action" value="edit_vm">
-                        <input type="hidden" name="vm_id" id="edit_vm_id">
-                        <?php include 'vm_form.php'; ?>
-                    </form>
-                </div>
-            </div>
-
-        <?php else: ?>
-            <script>
-                Swal.fire({
-                    title: 'Authentication Error',
-                    text: 'Failed to authenticate with vCenter',
-                    icon: 'error',
-                    confirmButtonColor: '#d33'
-                });
-            </script>
+                <?php endforeach; ?>
+            </table>
         <?php endif; ?>
+
+        <!-- ESXi Hosts Section -->
+        <?php if ($data['hosts'] && isset($data['hosts']['value'])): ?>
+            <h2>ESXi Hosts</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Connection State</th>
+                    <th>Power State</th>
+                    <th>CPU Cores</th>
+                    <th>Memory (GB)</th>
+                </tr>
+                <?php foreach ($data['hosts']['value'] as $host): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($host['name']); ?></td>
+                        <td>
+                            <span class="host-status status-<?php echo strtolower($host['connection_state']); ?>">
+                                <?php echo htmlspecialchars($host['connection_state']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="host-status status-<?php echo strtolower($host['power_state']); ?>">
+                                <?php echo htmlspecialchars($host['power_state']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo isset($host['cpu_count']) ? htmlspecialchars($host['cpu_count']) : 'N/A'; ?></td>
+                        <td><?php echo isset($host['memory_size_MiB']) ? htmlspecialchars(round($host['memory_size_MiB'] / 1024, 2)) : 'N/A'; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php endif; ?>
+
+        <!-- Datacenters Section -->
+        <?php if ($data['datacenters'] && isset($data['datacenters']['value'])): ?>
+            <h2>Datacenters</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                </tr>
+                <?php foreach ($data['datacenters']['value'] as $datacenter): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($datacenter['name']); ?></td>
+                        <td>
+                            <span class="datacenter-status">
+                                <?php echo isset($datacenter['status']) ? htmlspecialchars($datacenter['status']) : 'Available'; ?>
+                            </span>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php endif; ?>
+
+        <!-- Clusters Section -->
+        <?php if ($data['clusters'] && isset($data['clusters']['value'])): ?>
+            <h2>Clusters</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>HA Enabled</th>
+                    <th>DRS Enabled</th>
+                    <th>Host Count</th>
+                </tr>
+                <?php foreach ($data['clusters']['value'] as $cluster): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($cluster['name']); ?></td>
+                        <td>
+                            <span class="feature-status status-<?php echo isset($cluster['ha_enabled']) && $cluster['ha_enabled'] ? 'enabled' : 'disabled'; ?>">
+                                <?php echo isset($cluster['ha_enabled']) && $cluster['ha_enabled'] ? 'Yes' : 'No'; ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="feature-status status-<?php echo isset($cluster['drs_enabled']) && $cluster['drs_enabled'] ? 'enabled' : 'disabled'; ?>">
+                                <?php echo isset($cluster['drs_enabled']) && $cluster['drs_enabled'] ? 'Yes' : 'No'; ?>
+                            </span>
+                        </td>
+                        <td><?php echo isset($cluster['host_count']) ? htmlspecialchars($cluster['host_count']) : 'N/A'; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php endif; ?>
+
+        <!-- Create VM Modal -->
+        <div id="createVMModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="hideCreateVMModal()">&times;</span>
+                <h2>Create New Virtual Machine</h2>
+                <?php include 'vm_form.php'; ?>
+            </div>
+        </div>
+
+        <!-- Edit VM Modal -->
+        <div id="editVMModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="hideEditVMModal()">&times;</span>
+                <h2>Edit Virtual Machine</h2>
+                <?php include 'vm_form.php'; ?>
+            </div>
+        </div>
     </div>
 </body>
 </html>

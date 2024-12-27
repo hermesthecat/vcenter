@@ -11,16 +11,17 @@ if (!$vm_id) {
 }
 
 // Initialize vCenter connection
-$vcenter_data = initializeVCenter();
-$session_id = $vcenter_data['session_id'];
-$alerts = $vcenter_data['alerts'];
+$data = initializeVCenter($vcenter_host, $username, $password);
+$session_id = getSessionId($vcenter_host, $username, $password, $curl_opts);
+
+if (!$session_id) {
+    header('Location: index.php');
+    exit;
+}
 
 // Get VM details and metrics
 $details = getVMDetails($vcenter_host, $session_id, $curl_opts, $vm_id);
 $metrics = getVMMetrics($vcenter_host, $session_id, $curl_opts, $vm_id);
-
-// Get VM alerts
-$alerts = getVMAlerts($vcenter_host, $session_id, $curl_opts, $vm_id);
 
 if (!$details && !$metrics) {
     header('Location: index.php');
@@ -133,38 +134,6 @@ if (!$details && !$metrics) {
             </div>
         <?php endif; ?>
 
-        <?php if ($alerts && isset($alerts['value'])): ?>
-            <div class="alerts-section">
-                <h2>Recent Alerts</h2>
-                <table class="alerts-table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Severity</th>
-                            <th>Message</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($alerts['value'] as $alert): ?>
-                            <tr>
-                                <td class="alert-time">
-                                    <?php echo date('Y-m-d H:i:s', strtotime($alert['creation_time'])); ?>
-                                </td>
-                                <td>
-                                    <span class="alert-severity-<?php echo strtolower($alert['severity']); ?>">
-                                        <?php echo htmlspecialchars($alert['severity']); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo htmlspecialchars($alert['message']); ?></td>
-                                <td><?php echo htmlspecialchars($alert['resolution_state']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-
         <!-- Snapshots Section -->
         <div class="snapshots-section">
             <h2>Snapshots</h2>
@@ -215,10 +184,7 @@ if (!$details && !$metrics) {
 
     function loadSnapshots() {
         const vmId = '<?php echo htmlspecialchars($_GET['vm_id']); ?>';
-        fetchFromAPI('backend.php', {
-            action: 'get_snapshots',
-            vm_id: vmId
-        })
+        fetchFromAPI(`backend.php?action=get_snapshots&vm_id=${vmId}`)
         .then(data => {
             if (data.success) {
                 displaySnapshots(data.snapshots);
@@ -229,6 +195,13 @@ if (!$details && !$metrics) {
                     icon: 'error'
                 });
             }
+        })
+        .catch(error => {
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to load snapshots',
+                icon: 'error'
+            });
         });
     }
 
