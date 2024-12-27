@@ -1,14 +1,213 @@
 <?php
-// vCenter connection details
-$vcenter_host = "YOUR_VCENTER_SERVER";
-$username = "YOUR_USERNAME";
-$password = "YOUR_PASSWORD";
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// En başa ekleyin
+error_log("Script started");
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL) {
+        error_log('Fatal Error: ' . print_r($error, true));
+    }
+});
 
 // Disable SSL verification (for testing only - enable in production)
 $curl_opts = array(
     CURLOPT_SSL_VERIFYHOST => 0,
-    CURLOPT_SSL_VERIFYPEER => 0
+    CURLOPT_SSL_VERIFYPEER => 0,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 10
 );
+
+// vCenter connection details
+$vcenter_host = "vcenter.tarla-fel.org";
+$username = "administrator@vshere.local";
+$password = "Azadazad1*";
+
+// Function to get session ID with improved error handling
+function getSessionId($vcenter_host, $username, $password, $curl_opts)
+{
+    // Try the modern REST API endpoint first
+    $url = "https://$vcenter_host/rest/com/vmware/cis/session";
+    error_log("Trying modern REST API endpoint: $url");
+    
+    $ch = curl_init();
+    
+    // Base64 encode credentials
+    $auth = base64_encode("$username:$password");
+    
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            "Authorization: Basic $auth"
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => "",
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_SSL_VERIFYPEER => 0,
+        CURLOPT_VERBOSE => true,
+        CURLOPT_HEADER => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1  // Force HTTP/1.1
+    ]);
+
+    // Create a temporary file handle for CURL verbose output
+    $verbose = fopen('php://temp', 'w+');
+    curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
+    $response = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    // Get verbose information
+    rewind($verbose);
+    $verbose_log = stream_get_contents($verbose);
+    fclose($verbose);
+    
+    // Split response into headers and body
+    $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $header = substr($response, 0, $header_size);
+    $body = substr($response, $header_size);
+    
+    error_log("Modern API Response Code: $http_code");
+    error_log("Modern API Headers: $header");
+    error_log("Modern API Body: $body");
+    error_log("Modern API CURL Error: " . ($curl_error ?: 'None'));
+    error_log("Modern API Verbose Log: $verbose_log");
+    error_log("Modern API Auth Header: Basic $auth");
+    
+    curl_close($ch);
+
+    if ($http_code == 200) {
+        $response_data = json_decode($body, true);
+        if (isset($response_data['value'])) {
+            error_log("Successfully authenticated using modern API");
+            return $response_data['value'];
+        }
+    }
+
+    // If modern API fails, try with different URL format
+    $url = "https://$vcenter_host/rest/com/vmware/cis/session";
+    error_log("Trying alternative API endpoint: $url");
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            "Authorization: Basic $auth"
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => "{}",  // Empty JSON object
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_SSL_VERIFYPEER => 0,
+        CURLOPT_VERBOSE => true,
+        CURLOPT_HEADER => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,  // Force HTTP/1.1
+        CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+        CURLOPT_USERPWD => "$username:$password"
+    ]);
+
+    $verbose = fopen('php://temp', 'w+');
+    curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
+    $response = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    rewind($verbose);
+    $verbose_log = stream_get_contents($verbose);
+    fclose($verbose);
+    
+    $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $header = substr($response, 0, $header_size);
+    $body = substr($response, $header_size);
+    
+    error_log("Alternative API Response Code: $http_code");
+    error_log("Alternative API Headers: $header");
+    error_log("Alternative API Body: $body");
+    error_log("Alternative API CURL Error: " . ($curl_error ?: 'None'));
+    error_log("Alternative API Verbose Log: $verbose_log");
+    
+    curl_close($ch);
+
+    if ($http_code == 200) {
+        $response_data = json_decode($body, true);
+        if (isset($response_data['value'])) {
+            error_log("Successfully authenticated using alternative API");
+            return $response_data['value'];
+        }
+    }
+
+    error_log("All authentication attempts failed");
+    return null;
+}
+
+// Test connection function with additional checks
+function testConnection() {
+    global $vcenter_host, $username, $password, $curl_opts;
+    
+    echo "<h2>Testing vCenter Connection</h2>";
+    
+    // Test network connectivity first
+    echo "<h3>1. Testing Network Connectivity</h3>";
+    $connection = @fsockopen($vcenter_host, 443, $errno, $errstr, 5);
+    if ($connection) {
+        echo "✅ Successfully connected to port 443<br>";
+        fclose($connection);
+    } else {
+        echo "❌ Failed to connect to port 443: $errstr ($errno)<br>";
+        return;
+    }
+    
+    // Test API Connection
+    echo "<h3>2. Testing vCenter API Connection</h3>";
+    echo "Attempting to connect with:<br>";
+    echo "Host: $vcenter_host<br>";
+    echo "Username: $username<br>";
+    
+    $session_id = getSessionId($vcenter_host, $username, $password, $curl_opts);
+    
+    if ($session_id) {
+        echo "✅ Successfully connected to vCenter. Session ID: " . $session_id . "<br>";
+        
+        // Test a simple API call
+        echo "<h3>3. Testing Basic API Call</h3>";
+        $test_url = "https://$vcenter_host/rest/vcenter/host";
+        $ch = curl_init($test_url);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                "vmware-api-session-id: $session_id"
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        echo "API Test Response Code: $http_code<br>";
+        echo "API Test Response: " . htmlspecialchars($response) . "<br>";
+    } else {
+        echo "❌ Failed to connect to vCenter<br>";
+        echo "Please check PHP error logs for detailed information.<br>";
+    }
+}
+
+// Run tests if test parameter is present
+if (isset($_GET['test'])) {
+    testConnection();
+    exit;
+}
 
 // Function to show error/success messages
 function showError($message, $type = 'error')
@@ -19,31 +218,6 @@ function showError($message, $type = 'error')
         'alert_title' => ucfirst($type),
         'alert_message' => $message
     ];
-}
-
-// Function to get session ID
-function getSessionId($vcenter_host, $username, $password, $curl_opts)
-{
-    $url = "https://$vcenter_host/rest/com/vmware/cis/session";
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-    curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    foreach ($curl_opts as $key => $value) {
-        curl_setopt($ch, $key, $value);
-    }
-
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($http_code == 200) {
-        $response_data = json_decode($response, true);
-        return $response_data['value'];
-    }
-    return null;
 }
 
 // Function to get templates
@@ -356,27 +530,8 @@ function executeCommandInVM($vcenter_host, $session_id, $curl_opts, $vm_id, $com
 // Function to get all VMs
 function getVMs($vcenter_host, $session_id, $curl_opts)
 {
-    $url = "https://$vcenter_host/rest/vcenter/vm";
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Content-Type: application/json',
-        "vmware-api-session-id: $session_id"
-    ));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    foreach ($curl_opts as $key => $value) {
-        curl_setopt($ch, $key, $value);
-    }
-
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($http_code == 200) {
-        return json_decode($response, true);
-    }
-    return null;
+    $response = makeApiCall($vcenter_host, $session_id, $curl_opts, '/rest/vcenter/vm');
+    return $response ? ['value' => $response] : null;
 }
 
 // Function to get VM metrics
@@ -432,28 +587,10 @@ function getVMDetails($vcenter_host, $session_id, $curl_opts, $vm_id)
 }
 
 // Function to get hosts
-function getHosts($vcenter_host, $session_id, $curl_opts = array()) {
-    $url = "https://$vcenter_host/rest/vcenter/host";
-    
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Content-Type: application/json',
-        "vmware-api-session-id: $session_id"
-    ));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    
-    foreach ($curl_opts as $key => $value) {
-        curl_setopt($ch, $key, $value);
-    }
-    
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    if ($http_code === 200) {
-        return json_decode($response, true);
-    }
-    return null;
+function getHosts($vcenter_host, $session_id, $curl_opts)
+{
+    $response = makeApiCall($vcenter_host, $session_id, $curl_opts, '/rest/vcenter/host');
+    return $response ? ['value' => $response] : null;
 }
 
 // Function to initialize vCenter connection and get initial data
@@ -463,14 +600,32 @@ function initializeVCenter($vcenter_host, $username, $password) {
     $session_id = getSessionId($vcenter_host, $username, $password, $curl_opts);
     if ($session_id) {
         $data = array();
-        $data['vms'] = getVMs($vcenter_host, $session_id, $curl_opts);
-        $data['hosts'] = getHosts($vcenter_host, $session_id, $curl_opts);
-        $data['datacenters'] = getDatacenters($vcenter_host, $session_id, $curl_opts);
-        $data['clusters'] = getClusters($vcenter_host, $session_id, $curl_opts);
-        $data['templates'] = getTemplates($vcenter_host, $session_id, $curl_opts);
+        
+        // Add null checks and default empty arrays for each API call
+        $vms = getVMs($vcenter_host, $session_id, $curl_opts);
+        $data['vms'] = $vms ? $vms['value'] : [];
+        
+        $hosts = getHosts($vcenter_host, $session_id, $curl_opts);
+        $data['hosts'] = $hosts ? $hosts['value'] : [];
+        
+        $datacenters = getDatacenters($vcenter_host, $session_id, $curl_opts);
+        $data['datacenters'] = $datacenters ? $datacenters['value'] : [];
+        
+        $clusters = getClusters($vcenter_host, $session_id, $curl_opts);
+        $data['clusters'] = $clusters ? $clusters['value'] : [];
+        
+        $templates = getTemplates($vcenter_host, $session_id, $curl_opts);
+        $data['templates'] = $templates ? $templates['value'] : [];
+        
         return $data;
     }
-    return null;
+    return [
+        'vms' => [],
+        'hosts' => [],
+        'datacenters' => [],
+        'clusters' => [],
+        'templates' => []
+    ];
 }
 
 // Function to check if session is valid
@@ -956,4 +1111,32 @@ function createVMSnapshot($vcenter_host, $session_id, $curl_opts, $vm_id, $snaps
         'success' => false,
         'message' => 'Failed to create snapshot: ' . $response
     ];
+}
+
+// Helper function to make API calls
+function makeApiCall($vcenter_host, $session_id, $curl_opts, $endpoint) {
+    $url = "https://$vcenter_host$endpoint";
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        "vmware-api-session-id: $session_id"
+    ));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    foreach ($curl_opts as $key => $value) {
+        curl_setopt($ch, $key, $value);
+    }
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($http_code === 200 && $response) {
+        $decoded = json_decode($response, true);
+        return $decoded && isset($decoded['value']) ? $decoded['value'] : null;
+    }
+    
+    error_log("API call to $endpoint failed with status $http_code: $response");
+    return null;
 }
